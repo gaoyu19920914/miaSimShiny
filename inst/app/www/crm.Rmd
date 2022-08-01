@@ -1,0 +1,681 @@
+---
+title: "Consumer Resource Model - description"
+author: "Daniel Garza"
+date: "1/19/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## simulateConsumerResource
+
+Function to simulate MacArthur's consumer-resource model and its extensions for microbiomes. The model describes the dynamics of microbes and substrates in a community where the ecological interactions are explicitly encoded via the consumption and production of metabolites.
+
+### **Model Description**
+
+Each microbial species from a community of $n$ different species has preferences for a specific subset of the $k$ different substrates that are available to the community. Their growth rates depend on the availability of these resources, through the following differential equation:
+
+$\frac{dX_i}{dt} = \mu_{i}X_i (\sum_{j=1}^{k} e_{i,j} f_{i,j} S_j + \delta_i)$
+
+where $\mu_{i}$ is the maximum growth rate of species $i$, while $X_i$ is its abundance at time $t$.
+
+$e_{i,j}$ is the yield of substrate $j$ for species $i$, $f_{i,j}$ is the feeding form, which constraints the quantity of the substrate that can be consumed at each time step, while $S_j$ is the concentration of the substrate $j$ at time $t$, and $\delta_i$ is a dilution term.
+
+The function uses the Monod equation as the feeding form
+
+$f_{i,j}=\frac{S_j}{k_{i,j}+S_j}$, where $k_{i,j}$ is the Monod constant.
+
+Resources change according to the following differential equation:
+
+$\frac{dS_j}{dt}=\phi_j - \sum_{i=1}^{n} e_{i,j}f_{i,j}X_i + \sum_{i=1}^{n}p_{i,j} X_{i} (\sum_{j=1}^{k}e_{i,j}f_{i,j}+\delta_i)$
+
+where $\phi_j$ is a dilution term and $p_{i,j}$ is the yield of production of substrate $j$ that results from the growth of species $i$.
+
+In practice, a species either consumes or produces a metabolite (or is indifferent to its presence). Allowing us to summarize $e_{i,j}$ and $p_{i,j}$ in a single matrix ($E$, containing $n$ rows and $k$ columns). To distinguish them, the entries of $E$ are, respectively, positive and negative for the consumed and produced substrates.
+
+There are many possibilities for structuring $E$ according to specific assumptions. We will later summarize the options that are built into miaSim. But, first let's jump to some quick examples of how to simulate a consumer resource model with miaSim.
+
+### **Examples**
+
+The numbered examples below are compatible with the Shiny app. Feel free to click on the numbered example button on the top of the app screen to explore them.
+
+If not provided by the user, all parameters have default values except for the the **number of species** and the **number of resources**, which need to be provided. Check the list of parameters below for a complete description of the parameters and their defaults.
+
+#### **Example1: Default parameters**
+
+To illustrate the basic parameters, we begin simulating five species consuming or producing five different substrates.
+
+```{r}
+
+n.species <- 5
+n_resources <- 5
+
+#simulate the model 
+
+CRMsimul <- simulateConsumerResource(n.species = n.species, n_resources = n_resources)
+
+#visualize the result 
+
+makePlot(CRMsimul$matrix) #species plot
+
+makePlot(CRMsimul$resources,title = "quantity of compounds by time", obj = 'resources', y.label = 's.t') #resources plot
+
+```
+
+#### **Example2: exploring additional parameters**
+
+MiaSim provides a helper function to generate the matrix $E$.
+
+Below is a simulation of the same model where the user has more control over the model parameters.
+
+```{r}
+
+#generate the matrix E
+E = randomE(n.species = n.species, n_resources = n_resources)
+print(E)
+
+#positive entries are consumed, negative produced, zero has no influence on the species
+
+#define some simulation parameters
+t_end = 2000 #when to stop
+t_store = 500 #how many samples of the simulation to store (evenly spaced)
+migration_p = 0 #whether to allow migration from a metacommunity
+stochastic = 0 # whether to use noise in the simulation
+resources = rep(20, 5) #define the starting resource concentration
+
+
+#simulate the model
+CRMsimul <- simulateConsumerResource(n.species = n.species, n_resources = n_resources, resources = resources, stochastic = stochastic, migration_p = migration_p, E=E, t_end = t_end, t_store = t_store)
+
+#visualize the result
+makePlot(CRMsimul$matrix) #species plot
+makePlot(CRMsimul$resources,title = "quantity of compounds by time", obj = 'resources', y.label = 's.t') #resources plot
+
+```
+
+#### Operation modes
+
+The function allows the user to choose different dynamics for the nutrient supply by controlling the volume, inflow, and outflow of nutrients, which allows the simulation of batch, fed-batch, and chemostat mode.
+
+```{r}
+#batch operation mode
+
+#outflow = inflow = 0
+volume = 1000
+inflow_rate = 0
+outflow_rate = 0
+
+#simulate the model
+CRMsimul_batch <- simulateConsumerResource(n.species = n.species, n_resources = n_resources, resources = resources, stochastic = stochastic, migration_p = migration_p, E=E, t_end = t_end, t_store = t_store, inflow_rate = inflow_rate, outflow_rate = outflow_rate)
+
+#fed-batch operation mode
+
+#outflow = 0; inflow>0
+inflow_rate = 1
+CRMsimul_fedbatch <- simulateConsumerResource(n.species = n.species, n_resources = n_resources, resources = resources, stochastic = stochastic, migration_p = migration_p, E=E, t_end = t_end, t_store = t_store, inflow_rate = inflow_rate, outflow_rate = outflow_rate)
+
+#chemostat
+
+#outflow = inflow > 0
+outflow_rate = 1
+CRMsimul_chemostat <- simulateConsumerResource(n_species = n_species, n_resources = n_resources, resources = resources, stochastic = stochastic, migration_p = migration_p, E=E, t_end = t_end, t_store = t_store, inflow_rate = inflow_rate, outflow_rate = outflow_rate)
+
+#visualize the result
+makePlot(CRMsimul_batch$matrix, title = 'batch_bacteria')
+makePlot(CRMsimul_batch$resources, title = 'batch_resources', obj = 'resources', y.label = 's.t')
+makePlot(CRMsimul_batch$volume, title = 'batch_volume', obj = 'volume', y.label = 'volume.t')
+
+makePlot(CRMsimul_fedbatch$matrix, title = 'fedbatch_bacteria')
+makePlot(CRMsimul_fedbatch$resources, title = 'fedbatch_resources', obj = 'resources', y.label = 's.t')
+makePlot(CRMsimul_fedbatch$volume, title = 'fedbatch_volume', obj = 'volume', y.label = 'volume.t')
+
+
+makePlot(CRMsimul_chemostat$matrix, title = 'chemostat_bacteria')
+makePlot(CRMsimul_chemostat$resources, title = 'chemostat_resources', obj = 'resources', y.label = 's.t')
+makePlot(CRMsimul_chemostat$volume, title = 'chemostat_volume', obj = 'volume', y.label = 'volume.t')
+
+
+```
+
+#### Serial passages
+
+Communities are often operated with a non-continuous nutrient flux. For instance, ecological studies of synthetic microbial ecosystems often study long-term community behaviors by repeatedly passaging a fraction of the community to fresh media after a fixed time interval (e.g. [Goldford et al. 2018](https://www.science.org/doi/10.1126/science.aat1168)).
+
+The simulation parameters of miaSim make it easy to combine simulations, which allow users to emulate non-continuous operation modes. In the following example we simulate a serial passage experiment with the same community as above.
+
+For this simulation, the community is diluted at a $10 \%$ concentration in fresh media at $k$ intervals of $48 h$. At each dilution, the concentrations of resources ($S_t$) are set to:
+
+$S_{t} = S_{0} + \frac{pv_{t-1}}{v_{t}-pv_{t-1}} (S_{t-1} - S_{0})$
+
+And the concentrations of bacteria ($X_t$) are set to:
+
+$X_{t} = X_{t-1}(\frac{pv_{t-1}}{v_{t}-pv_{t-1}})$
+
+```{r}
+t.interval = 480 #each unit is 1/10 of an hour
+p = 0.1 #fraction of dilution
+volume = 1000 #constant volume
+inflow_rate = 0 
+outflow_rate = 0
+t_start = 0
+t_end = t_start + t.interval
+t_store = 100
+resources = rep(20, 5) 
+x0 = rep(5,5)
+
+#initial community
+CRMsimul <- simulateConsumerResource(n_species = n_species, x0 = x0, n_resources = n_resources, resources = resources, stochastic = stochastic, migration_p = migration_p, E=E, t_end = t_end, t_store = t_store)
+
+speciesSimul = CRMsimul$matrix
+resourcesSimul = CRMsimul$resources
+
+for (i in 1:20){
+  t_start = t_end
+  t_end = t_start + t.interval
+  current_resources = as.vector(tail(CRMsimul$resources,1))[-n_resources-1]
+  current_bacteria = as.vector(tail(CRMsimul$matrix,1))[-n_species-1]
+  new_resources = resources + (p*volume/(volume-p*volume))*(current_resources-resources)
+  new_bacteria = (p*volume/(volume-p*volume))*current_bacteria
+  CRMsimul <- simulateConsumerResource(n_species = n_species, x0 = new_bacteria, n_resources = n_resources, resources = new_resources, stochastic = stochastic, migration_p = migration_p, E=E, t_start = t_start, t_end = t_end, t_store = t_store)
+  speciesSimul = rbind(speciesSimul, CRMsimul$matrix)
+  resourcesSimul = rbind(resourcesSimul, CRMsimul$resources)
+  
+}
+
+#visualize the result
+makePlot(speciesSimul) #species plot
+makePlot(resourcesSimul,title = "quantity of compounds by time", obj = 'resources', y.label = 's.t') #resources plot
+```
+
+#### More about the $E$ matrix
+
+The $E$ matrix contains the energy yield for the production of biomass and the secretion of metabolic by-products. In practice, there are alternative formulations to define the flux between substrate consumption and production.
+
+When generating the random $E$ matrix using the function `randomE` there is a parameter called `maintenance` where the user may constraint the fraction of the flux that is not returned as a byproduct. This parameter can be interpreted as a fraction of the fluxes that are channeled into the organism's maintenance.
+
+#### **Example 3: maintenance**
+
+```{r}
+
+E = randomE(n_species = 1, n_resources = 10, maintenance = .1)
+
+print(sum(E*(E>0))) #consumed. For simplicity, values are normalized to add to 1
+
+print(abs(sum(E*(E<0)))) #produced
+
+```
+
+#### Using stoichiometric relationships for the secretion of metabolic by-products
+
+MiaSim is flexible for other relationships between the consumption of growth compounds and the secretion of byproducts since the user may provide their own $E$ matrix to the `simulateConsumerResource` function.
+
+One approach is to tie the consumption and production of resources to the stoichiometry of biological reactions (see [Marsland III, et al. 2019](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006793)) .
+
+#### **Example 4: anaerobic food web**
+
+For instance, consider an anaerobic community consisting of three microbes:
+
+-   An homoacetogen that converts 1 mol of glucose to 3 mols of acetate with a yield of 4.3 mols of ATP.
+
+-   An homofermenter that converts 1 mol of glucose into 2 mols of lactate, with a yield of two mols of ATP;
+
+-   A butyrate producer that converts 4 mols of lactate and into 3 mols of butyrate, with a yield of 1 ATP.
+
+```{r}
+#The stoichiometric matrix 
+D = matrix(c(1, -3, 0, 0, 1, 0, -2, 0, 0, 0, 4, -3), nrow = 3, byrow = TRUE)
+yields = c(4.3/4, 2/4, 1/4)
+E = D*yields
+
+#growth rates
+grs <- c(2, 4.5, 2.6)
+
+#initial species composition
+x0 <- c(1, 2, 1)
+
+#initial media composition
+resources <- c(10, 0, 0, 0)
+
+#simulate the model
+CRMsimul <- simulateConsumerResource(n_species = 3, n_resources = 4, stochastic = 0, migration_p = 0.0, E=E,inflow_rate = .1, outflow_rate = .1,resources = resources, names_species = c('homoacetogenic', 'homofermentative', 'butyrateProducer'), names_resources = c('glucose', 'acetate', 'lactate', 'butyrate'), x0=x0, t_end = 500, growth_rates = grs)
+
+#visualize the result
+makePlot(CRMsimul$matrix) #species plot
+makePlot(CRMsimul$resources,title = "quantity of compounds by time", obj = 'resources', y.label = 's.t') #resources plot
+```
+
+#### **Example 5: Preferred substrates**
+
+In general, substrates are not equally preferred by the microbes in a community, miaSim provides the possibility of generating the random $E$ matrix with a bias towards some preferred resource. This leads to the enrichment of the microbial preferences towards more "valuable" resources. This can be done by specifying the `trophic_preferences` parameter in the `randomE` function.
+
+For instance taking hierarchy of carbon source preferences of E. coli as a reference ([Aidelberg at al. 2014](https://bmcsystbiol.biomedcentral.com/articles/10.1186/s12918-014-0133-z)), we can obtain an E matrix where the weights of consumption are higher towards the preferred resources:
+
+```{r}
+
+E = randomE(n_species = 10, n_resources = 7, mean_consumption = 5, mean_production = 0, maintenance = 0, trophic_preferences = list(c(25,15,10,1,1,1,1)), names_resources = c('glucose', 'lactose', 'arabinose', 'xylose', 'sorbitol', 'rhamnose', 'ribose') )
+
+#visualize the matrix
+makeHeatmap(E)
+
+```
+
+#### **Example 6: hierarchical trophic preferences**
+
+In a complex community, feeding might be structured in a hierarchical way through trophic groups. Each group would prefer certain substrates and secrete by-products that are then preferred by the next subgroup. Evidence of such multilevel organization has been shown for the human gut microbiome ([Wong et al. 2019](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1007524)).
+
+The parameter `trophic_levels` of the `randomE` function allows users to simulate communities with multiple levels of substrate preferences, that cross-feed to each other in hierarchical fashion. In the following example, the by-products of the first 5 species are the preferred substrates of the next five, while in turn their by-products are then preferred by the others.
+
+```{r}
+E = randomE(n_species = 20, n_resources = 20, mean_consumption = 3, mean_production = 2, maintenance = 0.0, trophic_levels = c(5, 5, 10))
+
+#visualize the matrix
+makeHeatmap(E)
+
+#visualize the sum of trophic preferences by level
+Ep1 <- E[0:5,]
+Ep2 <- E[5:10,]
+Ep3 <- E[10:20,]
+
+level1<- t(cbind(colSums(Ep1*(Ep1<0)), colSums(Ep2*(Ep2>0))))
+level2<- t(cbind(colSums(Ep2*(Ep2<0)), colSums(Ep3*(Ep3>0))))
+
+makeHeatmap(level1, title = 'Trophic level 1', y.label = 'levels')
+makeHeatmap(level2, title = 'Trophic level 2', y.label = 'levels')
+
+```
+
+#### **Example 7: Nested tropic levels**
+
+The default implementation of MiaSim supports only the definition of linear connections between trophic groups (e.g. $A \rightarrow B\rightarrow C$).
+
+One can easily add nested relationships using the `trophic_preferences` parameter. For instance, consider the interactions depicted in the following cartoon where arrows represent the direction of the secretion/consumption flux of metabolic by-products between species. For simplicity, the trophic groups are represented by a single species $A$, $B$, $C$, and $D$ ($A\rightarrow B\rightarrow C \rightarrow A,D\rightarrow B$).
+
+![interaction cartoon](https://raw.githubusercontent.com/danielriosgarza/microbialTimeSeries/reviewed/files/images/interactionCartoon.png "interaction cartoon"){width="600"}
+
+To simulate a model with similar topology. We begin by setting the basic parameters:
+
+```{r}
+n_species = 4
+n_resources = 11
+names_species = c('A', 'B', 'C', 'D')
+
+#initial species composition
+x0 <- rep(1, 4)
+
+#initial media composition
+resources <- rep(1.5, 11)
+```
+
+Next, we go species-by-species and define their trophic preferences according to the cartoon, but making some use of the stochastic choices from the `randomE` function.
+
+we start drawing three secretion products for species C from a Dirichlet distribution, making sure it adds to $.5.$ These will be the first three metabolites from the eleven that are present in the community. We use these to make the preferences of species A and D, and use the `random.E` function to draw their secretion products.
+
+```{r}
+#secretion of C
+sec.C <- rdirichlet(1, c(1,1,1))*.5
+
+#The metabolic preferences of A are set to the secretion products of C
+pref.A.D <- list(c(sec.C*1000, rep(1,8)))
+
+em.A <- randomE(n_species = 1, n_resources = 11, names_species = 'A', trophic_preferences = pref.A.D, mean_production = 3, mean_consumption = 3)
+
+#secretion of A
+sec.A <- abs(em.A*(em.A<0))
+
+#The metabolic preferences of D are set to the secretion products of A
+em.D <- randomE(n_species = 1, n_resources = 11, names_species = 'D', trophic_preferences = pref.A.D, mean_production = 3, mean_consumption = 3)
+
+#secretion of D
+sec.D <- abs(em.D*(em.D<0))
+
+```
+
+Now we can use the byproducts of A and D as the preferred nutrients for B and use its byproducts as the preferred nutrients of C. For this, we need to assure that the three first metabolites are not byproducts of B so that it does not contradict the secretion of C when given as its preferred nutrients.
+
+```{r}
+
+#The metabolic preferences of B are set to the secretion products of A and D
+pref.B <- 1000*((sec.A + sec.D)/(sum(sec.A)+sum(sec.D)))
+pref.B[pref.B==0] <- 1
+pref.B <- list(pref.B[4:11])
+
+em.B <- randomE(n_species = 1, n_resources = 8, names_species = 'B', trophic_preferences = pref.B, mean_production = 3, mean_consumption = 3)
+
+#secretion of B
+sec.B <- abs(em.B*(em.B<0))
+
+#The metabolic preferences of C are set to the secretion products B
+pref.C <- sec.B*1000
+pref.C[pref.C==0] <- 1
+
+em.B <-t(as.matrix(c(rep(0,3),em.B)))
+row.names(em.B) = 'B'
+
+em.C <- randomE(n_species = 1, n_resources = 8, names_species = 'C', trophic_preferences = list(pref.C), mean_production = 0, mean_consumption = 3)
+
+em.C <- cbind(-sec.C, em.C)
+
+#Assembing the matrix
+E <- rbind(em.A, em.B, em.C, em.D)
+
+#visualize the matrix
+makeHeatmap(E)
+
+#simulate the model
+CRMsimul <- simulateConsumerResource(n_species = n_species, n_resources = n_resources, stochastic = FALSE, migration_p = 0.0, E=E,inflow_rate=0, names_species = c('A', 'B', 'C', 'D'), resources = resources, x0 = x0)
+
+#visualize the result
+makePlot(CRMsimul$matrix) 
+makePlot(CRMsimul$resources,title = "quantity of compounds by time", obj = 'resources', y.label = 's.t')
+```
+
+#### Hierarchical consumption of resources
+
+When bacteria are in an environment with multiple potential carbon sources, they often synchronize their regulatory machinery to consume one source at a time, a phenomena termed carbon catabolite repression (CCR) ([Bruckner & Titgemeyer, 2002](https://academic.oup.com/femsle/article/209/2/141/542840)). Once this source is depleted, they may switch to a next available source.
+
+This behavior can be simulated in miaSim. For this one needs to provide a matrix with the order of resource consumption per species. To illustrate, we'll simulate an example consisting of two bacteria, $A$ and $B$.
+
+Both consume first glucose until its depleted. But bacteria $A$ switches to lactate while bacteria $B$ switches to acetate. During growth, acetate and lactate are, respectively, their by-products.
+
+```{r}
+E = matrix(c(1,.5,-3,1,-2,.16), nrow = 2, byrow = TRUE)
+
+priorities = matrix(c(2,1,0,2,0,1), nrow=2, byrow = TRUE) #hierarchy of resouce preference 
+
+#growth rates
+grs <- c(1, 1)
+
+#initial species composition
+x0 <- c(2, 2)
+
+#initial media composition
+resources <- c(9, 0, 0)
+
+#simulate the model
+CRMsimul <- simulateConsumerResource(n_species = 2, n_resources = 3, inflow_rate=0.0, outflow_rate = 0.0, stochastic = 0, migration_p = 0.0, E=E,resources = resources, names_species = c('A', 'B'), names_resources = c('glucose', 'lactate', 'acetate'), x0=x0, t_end = 750, growth_rates = grs, trophic_priority = priorities)
+
+#visualize the result
+makePlot(CRMsimul$matrix) #species plot
+makePlot(CRMsimul$resources,title = "quantity of compounds by time", obj = 'resources', y.label = 's.t') #resources plot
+
+```
+
+#### More advanced example
+
+We have so far simulated models in a single instance, generating one time series per simulation. There might be situations when one is interested in studying the outcome of multiple simulations. Some example could be exploring if one or more parameters influence the diversity of the steady-state communities, studying the influence of randomness and noise in a model (more on this below), or studying if a different set of parameters give rise to communities that cluster when using a dimensionality reduction technique such as PCA or UMAP.
+
+miaSim allows the simulation of several instances of a model with the same parameters using the `generateMoments` function that returns the average (first moment) and variance (second moment) of a defined number of simulations, plus a the results of a defined time point (e.g. the composition of resources and microbes in the last time point).
+
+In the next example we explore the effect of resource concentration in community composition. For this we fix all the parameters of the simulateConsumerResource function except for the initial concentration of species. Next we simulate ten instances of models with diverse initial populations in a gradient. Finally we plot the result as a two-dimensional projection in the UMAP space ([umap](https://umap-learn.readthedocs.io/en/latest/)).
+
+To simulate ten instances of the model with the same parameters, we make use of the `generateMoments` function.
+
+```{r}
+
+#make a list with all the parameters (notice that the initial population, x0, is left out as it will be drawn from a random distribution at each realization of the function)
+
+n_species <- 10
+n_resources <- 5
+
+crm_params <- list(n_species = n_species,
+                  n_resources = n_resources,
+                  E = randomE(n_species, n_resources, mean_consumption = 1, mean_production = 3),
+                  resources = rep(1,5),
+                  monod_constant = matrix(rbeta(10*5, 10,10),nrow=10, ncol=5),
+                  inflow_rate = .5,
+                  outflow_rate = .5,
+                  migration_p = 0,
+                  stochastic = FALSE,
+                  t_start = 0,
+                  t_end = 1000,
+                  t_store = 500,
+                  growth_rates = runif(10),
+                  norm=TRUE)
+
+#write the model as an R expression
+crm <- parse(text = "do.call(simulateConsumerResource, crm_params)")
+
+#define a resource gradient
+resourceGradient <- seq(1, 100,20)
+basisComposition <- matrix(0, ncol=10, nrow = 0)
+basisResources <- matrix(0, ncol=5, nrow = 0)
+
+for (i in seq_along(resourceGradient)){
+  crm_params$resources = rep(resourceGradient[i],5)
+  #generateMoments functions (generates 10 instances of the models and stores the moments and last time point)
+  crmMoments <- generateMoments(crm, 10, 500, is.resource = TRUE)
+  basisComposition <-rbind(basisComposition, crmMoments$basisMatrix)
+  basisResources <-rbind(basisResources, crmMoments$basisResources)
+}
+
+grad <- c()
+
+for (i in seq_along(resourceGradient)){
+  grad <- c(grad, rep(resourceGradient[i],10))
+}
+
+#plot the result in a UMAP space
+
+makeUMAP(basisComposition, gradient = grad, gradient_title = 'resourceConc.')
+
+makeUMAP(basisResources, gradient = grad, gradient_title = 'resourceConc.')
+```
+
+#### Adding Noise and simulating measurement error
+
+In addition to simulating microbiome dynamics with the consumer resource model and extensions described above, miaSim contains several ways to simulate stochastic events, perturbations, migration from a metacommunity, and measurement errors. For each of these cases, noise is added to the simulation following specific assumptions for the specific kinds of noise. We illustrate each kind on the example of two bacteria, $A$ and $B$ that cross-feed.
+
+Similar to above, both bacteria consume glucose, but bacteria $A$ also consumes lactate while bacteria $B$ consumes acetate. During growth, acetate and lactate are, respectively, the by-products of $A$ and $B$.
+
+##### Stochastic
+
+The global parameter `stochastic` is a binary variable that controls if any stochastic behavior should be added to the model. It's a convenient control parameter to shut stochasticity on and off. In the models simulated above we have used `stochastic=0`. We need to set it to one to see any stochastic behavior.
+
+##### Drift
+
+Drift is the addition of small uncorrelated noise during the integration of the model that happens at each time interval of the model at a defined intensity (`sigma_drift`).
+
+```{r}
+
+E <- matrix(c(1,.5,-3, 1,-2,.16), nrow = 2, byrow = TRUE)
+
+#growth rates
+grs <- c(1, 1)
+
+#initial species composition
+x0 <- c(2, 2)
+
+#initial media composition
+resources <- c(10, 0, 0)
+
+# noise parameters
+stochastic = 1
+sigma_drift = 0.001
+sigma_epoch = 0
+epoch_p = 0
+sigma_external = 0
+t_external_events = NULL
+t_external_durations = NULL
+sigma_migration = 0
+migration_p = 0
+metacommunity_probability = 0
+error_variance= 0
+
+
+#simulate the model
+CRMsimul <- simulateConsumerResource(n_species = 2, n_resources = 3, stochastic = stochastic, sigma_drift = sigma_drift, sigma_epoch = sigma_epoch, sigma_external = sigma_external, t_external_events = t_external_events, t_external_durations = t_external_durations, sigma_migration = sigma_migration, error_variance = error_variance, migration_p = migration_p, metacommunity_probability = metacommunity_probability, E=E,resources = resources, names_species = c('A', 'B'), names_resources = c('glucose', 'lactate', 'acetate'), x0=x0, t_end = 750, growth_rates = grs)
+
+#visualize the result
+makePlot(CRMsimul$matrix, title = 'Abundance sigma_drift = 0.001') #species plot
+
+#increase the drift
+sigma_drift = 0.01
+
+CRMsimul <- simulateConsumerResource(n_species = 2, n_resources = 3, stochastic = stochastic, sigma_drift = sigma_drift, sigma_epoch = sigma_epoch, sigma_external = sigma_external, t_external_events = t_external_events, t_external_durations = t_external_durations, sigma_migration = sigma_migration, error_variance = error_variance, migration_p = migration_p, metacommunity_probability = metacommunity_probability, E=E,resources = resources, names_species = c('A', 'B'), names_resources = c('glucose', 'lactate', 'acetate'), x0=x0, t_end = 750, growth_rates = grs)
+
+makePlot(CRMsimul$matrix, title = 'Abundance sigma_drift = 0.01') #species plot
+
+```
+
+##### Epochs
+
+In addition to modeling noise as a small drift at each time step, miaSim supports the addition of noise as a frequent event that shifts the community from the composition predicted by the model. These events are unpredictable but happen at a certain frequency (`p.epoch`) and with a certain intensity (`sigma_epoch`).
+
+```{r}
+E = matrix(c(1,.5,-3,1,-2,.16), nrow = 2, byrow = TRUE)
+
+#growth rates
+grs <- c(1, 1)
+
+#initial species composition
+x0 <- c(2, 2)
+
+#initial media composition
+resources <- c(10, 0, 0)
+
+# noise parameters
+stochastic = 1
+sigma_drift = 0
+sigma_epoch = 0.1
+epoch_p = 0.001
+sigma_external = 0
+t_external_events = NULL
+t_external_durations = NULL
+sigma_migration = 0
+migration_p = 0
+metacommunity_probability = 0
+error_variance= 0
+
+
+#simulate the model
+CRMsimul <- simulateConsumerResource(n_species = 2, n_resources = 3, stochastic = stochastic, sigma_drift = sigma_drift, sigma_epoch = sigma_epoch, sigma_external = sigma_external, t_external_events = t_external_events, t_external_durations = t_external_durations, sigma_migration = sigma_migration, error_variance = error_variance, migration_p = migration_p, metacommunity_probability = metacommunity_probability, E=E,resources = resources, names_species = c('A', 'B'), names_resources = c('glucose', 'lactate', 'acetate'), x0=x0, t_end = 750, growth_rates = grs)
+
+#visualize the result
+makePlot(CRMsimul$matrix, title = 'epoch_p= 0.001') #species plot
+
+#increase the drift
+epoch_p = 0.5
+
+CRMsimul <- simulateConsumerResource(n_species = 2, n_resources = 3, stochastic = stochastic, sigma_drift = sigma_drift, sigma_epoch = sigma_epoch, sigma_external = sigma_external, t_external_events = t_external_events, t_external_durations = t_external_durations, sigma_migration = sigma_migration, error_variance = error_variance, migration_p = migration_p, metacommunity_probability = metacommunity_probability, E=E,resources = resources, names_species = c('A', 'B'), names_resources = c('glucose', 'lactate', 'acetate'), x0=x0, t_end = 750, growth_rates = grs)
+
+makePlot(CRMsimul$matrix, title = 'epoch_p= 0.5') #species plot
+```
+
+##### External perturbations
+
+Noise can also be added as an external perturbation that happens at a defined time (`t_external_events`) and has a defined intensity (`sigma_external`) and duration (`t_external_duration`).
+
+```{r}
+E = matrix(c(1,.5,-3,1,-2,.16), nrow = 2, byrow = TRUE)
+
+#growth rates
+grs <- c(1, 1)
+
+#initial species composition
+x0 <- c(2, 2)
+
+#initial media composition
+resources <- c(10, 0, 0)
+
+# noise parameters
+stochastic = 1
+sigma_drift = 0
+sigma_epoch = 0
+epoch_p = 0
+sigma_external = 0.01
+t_external_events = c(200,400,600)
+t_external_durations = c(10,20,50)
+sigma_migration = 0
+migration_p = 0
+metacommunity_probability = 0
+error_variance= 0
+
+
+#simulate the model
+CRMsimul <- simulateConsumerResource(n_species = 2, n_resources = 3, stochastic = stochastic, sigma_drift = sigma_drift, sigma_epoch = sigma_epoch, sigma_external = sigma_external, t_external_events = t_external_events, t_external_durations = t_external_durations, sigma_migration = sigma_migration, error_variance = error_variance, migration_p = migration_p, metacommunity_probability = metacommunity_probability, E=E,resources = resources, names_species = c('A', 'B'), names_resources = c('glucose', 'lactate', 'acetate'), x0=x0, t_end = 750, growth_rates = grs)
+
+#visualize the result
+makePlot(CRMsimul$matrix, title = 'Composition 200, 400, 600 external events') #species plot
+
+
+```
+
+##### Migration from a metacommunity
+
+Stochastic migration from a metacommunity with a defined composition (`metacommunity_probability`) can be simulated. Migration events are random but occur with a defined frequency (`migration_p`) and intensity (`sigma_migration`). Below we simulate the same community invaded by species $C$ that produces glucose and consumes both lactate and acetate.
+
+```{r}
+
+E = matrix(c(1,.5,-1.5,1,1.16,.16,-1.3,1.0,.3), nrow = 3, byrow = TRUE)
+
+#growth rates
+grs <- c(1, 1, 1)
+
+#initial species composition
+x0 <- c(2, 2, 0)
+
+#initial media composition
+resources <- c(100, 0, 0)
+
+# noise parameters
+stochastic = 1
+sigma_drift = 0
+sigma_epoch = 0
+epoch_p = 0
+sigma_external = 0
+t_external_events = NULL
+t_external_durations = NULL
+sigma_migration = 1.0
+migration_p = 0.01
+metacommunity_probability = c(0,0,1)
+error_variance= 0
+
+
+#simulate the model
+CRMsimul <- simulateConsumerResource(n_species = 3, n_resources = 3, stochastic = stochastic, sigma_drift = sigma_drift, sigma_epoch = sigma_epoch, sigma_external = sigma_external, t_external_events = t_external_events, t_external_durations = t_external_durations, sigma_migration = sigma_migration, error_variance = error_variance, migration_p = migration_p, metacommunity_probability = metacommunity_probability, E=E,resources = resources, names_species = c('A', 'B', 'C'), names_resources = c('glucose', 'lactate', 'acetate'), x0=x0, t_end = 750, growth_rates = grs)
+
+#visualize the result
+makePlot(CRMsimul$matrix, title = 'invasion by C') #species plot
+
+```
+
+##### Measurement Error
+
+Noise may also be added as measurement error. Such errors do not influence the next time points of the simulation
+
+```{r}
+
+E = matrix(c(1,.5,-3,1,-2,.16), nrow = 2, byrow = TRUE)
+
+#growth rates
+grs <- c(1, 1)
+
+#initial species composition
+x0 <- c(2, 2)
+
+#initial media composition
+resources <- c(10, 0, 0)
+
+# noise parameters
+stochastic = 1
+sigma_drift = 0
+sigma_epoch = 0
+epoch_p = 0
+sigma_external = 0
+t_external_events = NULL
+t_external_durations = NULL
+sigma_migration = 0
+migration_p = 0
+metacommunity_probability = 0
+error_variance= 0.01
+
+
+#simulate the model
+CRMsimul <- simulateConsumerResource(n_species = 2, n_resources = 3, stochastic = stochastic, sigma_drift = sigma_drift, sigma_epoch = sigma_epoch, sigma_external = sigma_external, t_external_events = t_external_events, t_external_durations = t_external_durations, sigma_migration = sigma_migration, error_variance = error_variance, migration_p = migration_p, metacommunity_probability = metacommunity_probability, E=E,resources = resources, names_species = c('A', 'B'), names_resources = c('glucose', 'lactate', 'acetate'), x0=x0, t_end = 750, growth_rates = grs)
+
+#visualize the result
+makePlot(CRMsimul$matrix, title = 'composition with measurement error') #species plot
+
+```

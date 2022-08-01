@@ -1,0 +1,84 @@
+---
+title: "Hubbell Model - parameters"
+author: "Yu Gao"
+date: "3/22/2022"
+output: html_document
+---
+
+#### model control
+
+
+**`n_species`** : `Integer`
+
+number of species in community. If not provided, then the length of `x0` is used.
+
+
+**`x0`** : `numeric`
+
+initial abundances of species. If not provided, then a draw from uniform distribution from 0.1 to 10 is used as the initial abundances of species.
+
+must have same length as `n_species`
+
+
+**`names_species`** : `character vector`
+
+names of species to use during the simulation. If not provided, species are named as *sp1, sp2, ...*
+
+must have same length as `n_species`
+
+
+**`migration_p`** : `numeric`
+
+probability/frequency of migration of certain individuals from a metacommunity in each time step of the simulation. The strength of migration is controlled by `sigma_migration` . By default is 0.01
+
+
+**`metacommunity_probability`** : `numeric vector`
+
+the probability distribution of likelihood that species from the metacommunity can enter the community during the simulation. If not given, `n_species` of numbers will be drawn from a dirichlet distribution which alpha = 1.
+
+must have same length as `n_species`.
+
+
+**`k_events`** : `numeric`
+
+the number of individual replacements (growth + migration) happening during a small time interval \tau. By default is 1. 
+
+must have same length as `n_species`.
+
+
+**`growth_rates`** : `numeric`
+
+growth rates of species. In this Hubbell model, this variable defines the change rate of abundance of each species. If not provided, then 1 will be used for each species, meaning in each small time interval \tau,  number of newly born individuals + number of immigrants = number of dead individuals.
+
+must have same length as `n_species`.
+
+
+**`error_variance`** : `numeric`
+
+the variance of measurement error. By default is 0, indicating that the result won't contain any measurement error.
+
+This value must be non-negative.
+
+**`norm`** : `boolean`
+
+whether the returned result should be normalized (return relative abundances for species in the community). By default is `FALSE` .
+
+
+
+#### time control
+
+**`t_end`** : `numeric`
+
+the final time of the simulation. If not given, by default is 1000.
+
+**`t_start`** : `numeric`
+
+the starting time of the simulation. If not given, by default is 0. Must be less than `t_end`
+
+**`t_step`** : `numeric`
+
+the time interval for each step of calculation. If not given, by default is 0.1
+
+**`t_store`** : `numeric`
+
+the number of time points to store/export for the whole simulation. If not given, by default is 1000. Note that must be less than `(t_end - t_start)/t_step` .

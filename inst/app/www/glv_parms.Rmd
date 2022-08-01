@@ -1,0 +1,140 @@
+---
+title: "generalized Lotka-Volterra Model - parameters"
+author: "Yu Gao"
+date: "3/11/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### simulateConsumerResource
+
+#### basics
+
+**`n_species`** : `Integer`
+
+number of species in community
+
+#### customize
+
+**`names_species`** : `character vector`
+
+names of species to use during the simulation. If not provided, species are named as *sp1, sp2, ...*
+
+must have same length as `n_species`
+
+#### Matrix of interaction
+
+**`A`** : `numeric matrix`
+
+matrix of interspecies interaction A matrix defining the positive and negative interactions between n_species. It is recommended to be generated using the function `randomA`.
+
+must have dimension as `(n_species, n_species)`
+
+#### initial state
+
+**`x0`** : `numeric`
+
+initial abundances of species. If not provided, then a draw from uniform distribution from 0.1 to 10 is used as the initial abundances of species.
+
+must have same length as `n_species`
+
+#### growth of microorganisms
+
+**`growth_rates`** : `numeric`
+
+growth rates of species. In this generalized Lotka-Volterra model, this variable is the $\mathbf{b}$ in aforementioned equation defining the change rate of abundance. If not provided, then a random draw from a uniform distribution from 0 to  1 will be used for each species.
+
+must have same length as `n_species`
+
+#### stochasticity
+
+**`stochastic`**: `boolean`
+
+whether to include stochasticity in the simulation. By default `stochastic` is `FALSE` .
+
+**`sigma_drift`**: `numeric`
+
+strengths of ecological drift which happens on each step in the simulation. By default is 0.001, indicating the standard deviation of a normally distributed noise.
+
+Controlled by `stochastic` .
+
+**`sigma_epoch`** : `numeric`
+
+strength of intrinsic fluctuations of community. By default is 0.1. This stochastic epoch event is not continuous and the probability/frequency is controlled by `epoch_p` .
+
+Controlled by `stochastic` .
+
+**`epoch_p`** : `numeric`
+
+probability/frequency of intrinsic random periodic changes introduced to the community composition. By default is 0.001.
+
+Controlled by `stochastic` .
+
+**`sigma_external`** : `numeric`
+
+strength of external disturbances happening on the given time points. Time points are defined using `t_external_events` and `t_external_durations` . By default is 0.3
+
+Controlled by `stochastic` .
+
+**`t_external_events`** : `numeric vector`
+
+starting time points of external disturbances. By default there's no external events.
+
+Controlled by `stochastic` .
+
+must have same length as `t_external_durations`
+
+**`t_external_durations`** : `numeric vector`
+
+durations of external disturbances. By default there's no external events.
+
+Controlled by `stochastic` .
+
+must have same length as `t_external_events`
+
+**`migration_p`** : `numeric`
+
+probability/frequency of migration of certain individuals from a metacommunity in each time step of the simulation. The strength of migration is controlled by `sigma_migration` . By default is 0.01
+
+Controlled by `stochastic` .
+
+**`sigma_migration`** : `numeric`
+
+intensity of migration at each time step. By default is 0.01
+
+**`metacommunity_probability`** : `numeric vector`
+
+the probability distribution of likelihood that species from the metacommunity can enter the community during the simulation. If not given, `n_species` of numbers will be drawn from a dirichlet distribution which alpha = 1.
+
+must have same length as `n_species` .
+
+**`error_variance`** : `numeric`
+
+the variance of measurement error. By default is 0, indicating that the result won't contain any measurement error.
+
+This value must be non-negative.
+
+**`norm`** : `boolean`
+
+whether the returned result should be normalized (return relative abundances for species in the community). By default is `FALSE` .
+
+#### time control
+
+**`t_end`** : `numeric`
+
+the final time of the simulation. If not given, by default is 1000.
+
+**`t_start`** : `numeric`
+
+the starting time of the simulation. If not given, by default is 0. Must be less than `t_end`
+
+**`t_step`** : `numeric`
+
+the time interval for each step of calculation. If not given, by default is 0.1
+
+**`t_store`** : `numeric`
+
+the number of time points to store/export for the whole simulation. If not given, by default is 1000. Note that must be less than `(t_end - t_start)/t_step` .

@@ -1,0 +1,81 @@
+---
+title: "Logistic model - description"
+author: "Yu Gao"
+date: "3/24/2022"
+output: html_document
+---
+
+## SimulateStochasticLogistic
+
+Function to simulate logistic model (with death rates and stochastic perturbations).
+
+The logistic growth model is first named by Pierre François Verhulst, and here we used the popularized expression with a carrying capacity $K$, given by Raymond Pearl and Lowell Reed:
+
+$\frac{dN}{dt} = rN(1-\frac{N}{K})$ indicates the change rates of population of a species. $N$ is population, $r$ is growth rate.
+
+
+### **Model Description**
+
+In our program, $x0$ defines the populations of each species($N$), $growth\_rates$ defines their corresponding growth rates ($r$). In addition to growth rates, we added death rates $death\_rates$ to simulate the death of species.
+
+$\frac{dN}{dt} = growth\_rates \times N(1-\frac{N}{K}) - death\_rates \times N$
+
+Note that the $N$ in the equation is different. For the growing part, it presumes that all cells, whether dead or alive, can contribute to the growth, and it's the carrying capacity which limits the growth and avoids the explosion, respecting the original logistic growth model at its best; for the dying part, however, only currently living cells are multiplied. If we want to use the original logistic growth model, we can simply set death_rates to 0.
+
+
+### **Examples**
+
+All examples below are compatible with the Shiny app. Feel free to click on the numbered example button on the top of the app screen to explore them.
+
+If not provided by the user, all parameters have default values except for the the number of species, which needs to be provided in Shiny app. Check the list of parameters below for a complete description of the parameters and their defaults.
+
+#### **Example1: logistic model without stochasticity**
+```{r}
+set.seed(42)
+ExampleLogistic <- simulateStochasticLogistic(
+    n_species = 5, 
+    stochastic = FALSE
+    )
+makePlot(ExampleLogistic$matrix)
+```
+
+#### **Example2: logistic model without stochasticity or death rates**
+```{r}
+set.seed(42)
+ExampleLogistic <- simulateStochasticLogistic(
+    n_species = 5, 
+    stochastic = FALSE, 
+    death_rates=rep(0,5)
+    )
+makePlot(ExampleLogistic$matrix)
+```
+
+#### **Example3: logistic model with given growth and death rates**
+```{r}
+set.seed(42)
+ExampleLogistic <- simulateStochasticLogistic(
+    n_species = 5, 
+    stochastic = FALSE, 
+    death_rates=rep(0,5),
+    growth_rates = seq(0.1, 0.5, 0.1),
+    death_rates = seq(0.001, 0.0002, -0.0002),
+    carrying_capacities = seq(1000, 1800, 200)
+    )
+makePlot(ExampleLogistic$matrix)
+```
+
+#### **Example4: logistic model with measurement errors and returns a normalized result**
+```{r}
+set.seed(42)
+ExampleLogistic <- simulateStochasticLogistic(
+    n_species = 5, 
+    stochastic = FALSE, 
+    death_rates=rep(0,5),
+    growth_rates = seq(0.1, 0.5, 0.1),
+    death_rates = seq(0.001, 0.0002, -0.0002),
+    carrying_capacities = seq(1000, 1800, 200),
+    error_variance = 500, 
+    norm = TRUE
+    )
+makePlot(ExampleLogistic$matrix)
+```

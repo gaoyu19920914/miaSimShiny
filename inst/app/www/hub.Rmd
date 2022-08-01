@@ -1,0 +1,118 @@
+---
+title: "Hubbell model - description"
+author: "Yu Gao"
+date: "3/16/2022"
+output: html_document
+---
+
+## simulateHubbellRates
+
+Function to simulate Stephen P. Hubbell's neutral model for microbial communities (with an adjustable growth rate which can differ from species to species).
+
+This model is neutral as assumed by Hubbell's definition: an ecological community (a group of trophically similar, sympatric species that actually or potentially compete in a local area for the same or similar resources) is structured entirely by ecological drift, random migration, and random speciation. The unified neutral theory of biodiversity (UNTB) treats organisms in the community as essentially identical in their per capita probabilities of giving birth, dying, migrating, and speciating. (*The unified neutral theory of biodiversity and biogeography*)
+
+### **Model Description**
+
+To simulate this neutral model, in each time interval, multiple calculations (including random death, random birth, and random migration of individuals) are conducted recursively, making the original model computationally intensive. To accelerate the simulation, instead of drawing from a probability distribution function at each time point, we converted the probability to the equivalent waiting time interval using a gamma distribution (alternative distributions works well equally). This is done with the same principal as in the Gillespie algorithm, making the calculation happens at different time points with a varying interval, but achieving an equivalent stochastic simulation.
+
+As mentioned before, there's a conversion from probability at each time point to the waiting time interval, and we define the number of events (birth and migration) during this time interval as $k_{events}$. In this implementation of the model, the total number of individuals is fixed, so the number of new birth or immigration of individuals sum up to the number of dead individuals during the same period. To be detailed, $migration\_p$ defines the probability of a new species coming from the immigration, and $1-migration\_p$ defines the probability of a new species coming from the birth. Here the probability is applied to all individuals and is demographically proportional to their corresponding populations of each species.
+
+From $t_{start}$, the time interval $\tau$ is recalculated and added repeatedly as indicated by the following gamma distribution:
+
+$\tau = \Gamma(k_{events}, \frac{1}{\sum_{n=1}^{n_{species}} x0})$
+
+where $n_{species}$ indicates the total number of species in the simulation, and $x0$ is initial abundance (number of individuals) of different microbial species.
+
+Before the total time accumulated to the $t_{end}$, a series of calculation happen recursively in every different time interval in the following order:
+
+1.  calculate the number of random death in this loop, and distribute them in different species:
+
+    $death = Multi(k_{events}, relative \space abundance)$
+
+    Here, $relative \space abundance$ is proportional to $n_{t}$, the number of individuals in each species at time point $t$.
+
+2.  calculate number of random birth $k_{birth}$ and migration $k_{migration}$ in this loop, making sure their sum equals to $k_{events}$:
+
+    $k_{birth} = B(k_{events}, 1-migration_p)$ , and
+
+    $k_{migration} = k_{events} - k_{birth}$
+
+3.  distribute random birth of new individuals to different species:
+
+    $birth = Multi(k_{birth}, relative \space abundance)$
+
+4.  calculate random migration of new individuals for different species:
+
+    $migration = Multi(k_{migration}, metacommunity\_probability)$
+
+    For each species, $metacommunity\_probability$ is their probabilities of migration from the metacommunity. If not give, they will be drawn from a Dirichlet distribution, which is different from the original Hubbell's UNTB.
+
+5.  combine all changes in this loop:
+
+    $n_{t+\tau} = n_{t} - death + birth + migration$
+
+    For each species, $growth\_rates$ are their average growth rates ($\frac{n{t+\tau}}{nt}$, with $n$ indicating number of individuals). If not given, $growth\_rates$ will be identical to 1 among species (as assumed by Hubbell). The total number of individuals in the model stays the same. Therefore, $growth\_rates$ is only meaningful when compared between species.
+
+### **Examples**
+
+All examples below are compatible with the Shiny app. Feel free to click on the numbered example button on the top of the app screen to explore them.
+
+If not provided by the user, all parameters have default values except for the the number of species, which needs to be provided in Shiny app. Check the list of parameters below for a complete description of the parameters and their defaults.
+
+#### **Example1: Default parameters**
+
+```{r}
+set.seed(42)
+ExampleHubbellRates <- simulateHubbellRates(n_species = 5)
+makePlot(ExampleHubbellRates$matrix)
+```
+
+#### **Example2: no migration from metacommunity, all stochastic birth and death**
+
+```{r}
+set.seed(42)
+ExampleHubbellRates <- simulateHubbellRates(n_species = 5, migration_p = 0)
+makePlot(ExampleHubbellRates$matrix)
+```
+
+#### **Example3: all migration from metacommunity, no stochastic birth and death**
+
+```{r}
+set.seed(42)
+ExampleHubbellRates <- simulateHubbellRates(
+    n_species = 5, 
+    migration_p = 1,
+    metacommunity_probability = c(0.1, 0.15, 0.2, 0.25, 0.3),
+    t_end = 20, 
+    t_store = 200)
+makePlot(ExampleHubbellRates$matrix)
+```
+
+#### **Example4: all migration, no stochastic birth and death, but with measurement errors**
+
+```{r}
+set.seed(42)
+ExampleHubbellRates <- simulateHubbellRates(
+    n_species = 5, 
+    migration_p = 1,
+    metacommunity_probability = c(0.1, 0.15, 0.2, 0.25, 0.3),
+    t_end = 20, 
+    t_store = 200,
+    error_variance = 100)
+makePlot(ExampleHubbellRates$matrix) 
+```
+
+#### **Example5: model with specified growth rates for different species and specified metacommunity probabilities**
+
+```{r}
+set.seed(42)
+ExampleHubbellRates <- simulateHubbellRates(
+    n_species = 5,
+    migration_p = 0.1,
+    metacommunity_probability = c(0.1, 0.15, 0.2, 0.25, 0.3), 
+    t_end = 200, 
+    t_store = 1000, 
+    k_events = 5,
+    growth_rates = c(1.1, 1.05, 1, 0.95, 0.9))
+makePlot(ExampleHubbellRates$matrix)
+```

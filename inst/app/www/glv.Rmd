@@ -1,0 +1,148 @@
+---
+title: "Generalized Lotka-Volterra Model - description"
+output: html_document
+---
+
+## SimulateGLV
+
+Function to simulate generalized Lotka-Volterra model and its extensions for microbiomes. The model describes the dynamics of different species in a community. In this model, all kinds of interspecies interactions are generalized to pairs of signs for both species (-/-, -/+, +/-, +/+), and the absolute values for both species indicate the strength of the interaction on the population.
+
+### **Model Description**
+
+The generalized Lotka-Volterra model of community depicts the dynamics of populations $x_1, x_2, ..., x_n$ of $n$ species. The change rate of the $i$ th species along time,
+
+$\frac{dx_i}{dt} = x_i f_i(x)$,
+
+indicates that the change is dependent on two parts: the population of $x_i$ and the function $f$.
+
+$\mathbf{f} = \mathbf{b} + A \mathbf{x}$
+
+where $\mathbf{b}_i$ is the growth rate of the $i$th species, and $A^{n \times n}$ is the community matrix defining the interspecies interactions between each 2 species. For example, $A_{i,j}$ is the interaction on species $i$ from species $j$.
+
+Generally speaking, the diagonal values in $A$ (for example $A_{i,i}$) is often negative. This indicates the intraspecific competition for habitat, nutrients, etc.
+
+### **Examples**
+
+Most examples below are compatible with the Shiny app. Feel free to click on the numbered example button on the top of the app screen to explore them.
+
+If not provided by the user, all parameters have default values except for the the number of species, which needs to be provided. Check the list of parameters below for a complete description of the parameters and their defaults.
+
+#### **Example 1: Minimum model with default parameters**
+
+To illustrate the basic parameters, we begin simulating five species changes in the gLV model.
+
+```{r}
+ExampleGLV <- simulateGLV(n_species = 5)
+makePlot(ExampleGLV$matrix)
+```
+
+#### **Example 2: Model with custom interspecies interaction matrix**
+
+In this example, we first generate a matrix of interspecies interactions using `randomA` function, then we can model the dynamics of this community.
+
+```{r}
+# generate a random interaction matrix
+ExampleA <- randomA(n_species = 4, diagonal = -1, connectance = 0.5, scale_off_diagonal = 0.5, symmetric = TRUE)
+makeHeatmap(ExampleA, title = "interspecies interactions matrix")
+# run the model with default values (only stochastic migration considered)
+ExampleGLV <- simulateGLV(n_species = 4, A = ExampleA, stochastic = FALSE)
+# visualize the result
+makePlot(ExampleGLV$matrix)
+```
+
+#### **Example 3: Model without migration**
+
+In this example, we model the dynamics of community without the stochastic migration.
+
+```{r}
+# generate a random interaction matrix
+ExampleA <- randomA(n_species = 4, diagonal = -1, connectance = 0.5, scale_off_diagonal = 0.5, symmetric = TRUE)
+makeHeatmap(ExampleA, title = "interspecies interactions matrix")
+# run the model with default values (only stochastic migration considered)
+ExampleGLV <- simulateGLV(n_species = 4, A = ExampleA, stochastic = FALSE, migration_p = 0)
+# visualize the result
+makePlot(ExampleGLV$matrix)
+
+```
+
+#### **Example 4: Model without migration but with measurement error**
+
+```{r}
+# generate a random interaction matrix
+ExampleA <- randomA(n_species = 4, diagonal = -1, connectance = 0.5, scale_off_diagonal = 0.5, symmetric = TRUE)
+makeHeatmap(ExampleA, title = "interspecies interactions matrix")
+# run the model with default values (only stochastic migration considered)
+ExampleGLV <- simulateGLV(n_species = 4, A = ExampleA, stochastic = FALSE, migration_p = 0, error_variance = 0.001)
+# visualize the result
+makePlot(ExampleGLV$matrix)
+
+```
+
+#### **Example 5: replication of existing research using gLV**
+
+<https://www.biorxiv.org/content/10.1101/2021.10.28.466339v1.full>
+
+In this paper, 3 phases of ecological dynamics of microbial communities were discussed. These 3 phases are: - Phase I: stable full coexistence - Phase II: stable partial coexistence - Phase III: persistent fluctuation. According to the authors, the size of species pool (number of species) and the interaction strength together determine the different phases. As demonstrated in their Fig. 1.
+
+[![Fig.1. Theory predicts that species pool size and interspecies interaction strength shape phases of community diversity and dynamics.](https://www.biorxiv.org/content/biorxiv/early/2021/10/29/2021.10.28.466339/F1.large.jpg?width=800&height=600&carousel=1 "Fig.1. Theory predicts that species pool size and interspecies interaction strength shape phases of community diversity and dynamics."){width="552"}](https://www.biorxiv.org/content/10.1101/2021.10.28.466339v1.full)
+
+In this example, we would like to replicate this reported trend (with a minor difference in the implementations of dispersal). Due to the different implementations of the dispersal, we also adapted the judgement criteria for the fluctuation.
+
+```{r}
+# define the function
+glvExample5 <- function(n_species, alpha) {
+    ExampleA <- randomA(
+        n_species = n_species,
+        diagonal = -1, 
+        connectance = 1, 
+        mutualism = 0, 
+        commensalism = 0, 
+        parasitism = 0, 
+        amensalism = 0, 
+        interactions = runif(n_species^2, 0, 2*alpha), 
+        scale_off_diagonal = 1)
+    makeHeatmap(ExampleA, title = "interspecies interactions matrix")
+    ExampleGLV <- simulateGLV(
+        n_species = n_species, 
+        A = ExampleA, 
+        x0 = rep(0.1,n_species),
+        stochastic = FALSE,
+        migration_p = 1,
+        sigma_migration = 0.01,
+        growth_rates = 1-2*alpha,
+        t_step = 1)
+    makePlot(ExampleGLV$matrix) + scale_y_log10(limits = c(1E-8, 1))
+    finalValues <- ExampleGLV$matrix[1000,seq_len(n_species)]
+    survivalFraction <- sum(finalValues > 1E-3)/n_species
+    print(paste("Survival fraction =", survivalFraction))
+    maxValues <- apply(X = ExampleGLV$matrix[,seq_len(n_species)], MARGIN = 2, FUN = max)
+    minValues <- apply(X = ExampleGLV$matrix[,seq_len(n_species)], MARGIN = 2, FUN = min)
+    # fluctuationFraction <- sum(maxValues / minValues > 1E4) / n_species
+    fluctuationFraction <- sum(maxValues / finalValues > 1E4) / n_species
+    print(paste("Fluctuation fraction =", fluctuationFraction))
+    return(list(A = ExampleA, GLV = ExampleGLV, survivalFraction, fluctuationFraction))
+}
+```
+
+```{r}
+# replicate the fig1a
+EX5.1 <- glvExample5(n_species = 4, alpha = 0.3)
+makePlot(EX5.1$GLV$matrix) + scale_y_log10(limits = c(1E-8, 1))
+EX5.2 <- glvExample5(n_species = 20, alpha = 0.3)
+makePlot(EX5.2$GLV$matrix) + scale_y_log10(limits = c(1E-8, 1))
+EX5.3 <- glvExample5(n_species = 50, alpha = 0.3)
+makePlot(EX5.3$GLV$matrix) + scale_y_log10(limits = c(1E-8, 1))
+
+```
+
+```{r}
+# replicate the fig1b
+EX5.4 <- glvExample5(n_species = 50, alpha = 0.08)
+makePlot(EX5.4$GLV$matrix) + scale_y_log10(limits = c(1E-8, 1))
+EX5.5 <- glvExample5(n_species = 50, alpha = 0.16)
+makePlot(EX5.5$GLV$matrix) + scale_y_log10(limits = c(1E-8, 1))
+EX5.6 <- glvExample5(n_species = 50, alpha = 0.64)
+makePlot(EX5.6$GLV$matrix) + scale_y_log10(limits = c(1E-8, 1))
+```
+
+<https://www.frontiersin.org/articles/10.3389/fmicb.2019.00288/full>
