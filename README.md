@@ -1,6 +1,6 @@
 # miaSimShiny
 
-The goal of miaSimShiny is to facilitate the use of [miaSim (an R package for microbial community simulations)](https://github.com/microbiome/miaSim){.uri} in [a local shiny app](https://shiny.rstudio.com).
+The goal of miaSimShiny is to facilitate the use of [miaSim (an R package for microbial community simulations)](https://github.com/microbiome/miaSim) in [a local shiny app](https://shiny.rstudio.com).
 
 ## Installation
 
