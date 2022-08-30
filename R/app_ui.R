@@ -655,7 +655,7 @@ app_ui <- function(request) {
               fluidRow(
                 column(
                   width = 12,
-                  withMathJax(includeMarkdown("inst/app/www/crm.Rmd")),
+                  withMathJax(includeMarkdown(app_sys("app/www/crm.Rmd"))),
                 ),
               )
           ) %>%
@@ -665,7 +665,7 @@ app_ui <- function(request) {
             content =
               fluidRow(
                 column(width = 12,
-                       withMathJax(includeMarkdown("inst/app/www/crm_parms.Rmd")),
+                       withMathJax(includeMarkdown(app_sys("app/www/crm_parms.Rmd"))),
                 ),
               )
           ) %>%
@@ -1009,7 +1009,7 @@ app_ui <- function(request) {
               fluidRow(
                 column(
                   width = 12,
-                  withMathJax(includeMarkdown("inst/app/www/glv.Rmd")),
+                  withMathJax(includeMarkdown(app_sys("app/www/glv.Rmd"))),
                 ),
               )
           ) %>%
@@ -1019,7 +1019,7 @@ app_ui <- function(request) {
             content =
               fluidRow(
                 column(width = 12,
-                       withMathJax(includeMarkdown("inst/app/www/glv_parms.Rmd")),
+                       withMathJax(includeMarkdown(app_sys("app/www/glv_parms.Rmd"))),
                 ),
               )
           ) %>%
@@ -1256,7 +1256,7 @@ app_ui <- function(request) {
               fluidRow(
                 column(
                   width = 12,
-                  withMathJax(includeMarkdown("inst/app/www/hub.Rmd")),
+                  withMathJax(includeMarkdown(app_sys("app/www/hub.Rmd"))),
                 ),
               )
           ) %>%
@@ -1267,7 +1267,7 @@ app_ui <- function(request) {
               fluidRow(
                 column(
                   width = 12,
-                  withMathJax(includeMarkdown("inst/app/www/hub_parms.Rmd")),
+                  withMathJax(includeMarkdown(app_sys("app/www/hub_parms.Rmd"))),
                 ),
               )
           ) %>%
@@ -1540,7 +1540,7 @@ app_ui <- function(request) {
               fluidRow(
                 column(
                   width = 12,
-                  withMathJax(includeMarkdown("inst/app/www/log.Rmd")),
+                  withMathJax(includeMarkdown(app_sys("app/www/log.Rmd"))),
                 ),
               )
           ) %>%
@@ -1551,7 +1551,7 @@ app_ui <- function(request) {
               fluidRow(
                 column(
                   width = 12,
-                  withMathJax(includeMarkdown("inst/app/www/log_parms.Rmd")),
+                  withMathJax(includeMarkdown(app_sys("app/www/log_parms.Rmd"))),
                 ),
               )
           ) %>%
