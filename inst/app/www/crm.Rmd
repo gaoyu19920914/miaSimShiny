@@ -49,12 +49,12 @@ To illustrate the basic parameters, we begin simulating five species consuming o
 
 ```{r}
 
-n.species <- 5
+n_species <- 5
 n_resources <- 5
 
 #simulate the model 
 
-CRMsimul <- simulateConsumerResource(n.species = n.species, n_resources = n_resources)
+CRMsimul <- simulateConsumerResource(n_species = n_species, n_resources = n_resources)
 
 #visualize the result 
 
@@ -73,7 +73,7 @@ Below is a simulation of the same model where the user has more control over the
 ```{r}
 
 #generate the matrix E
-E = randomE(n.species = n.species, n_resources = n_resources)
+E = randomE(n_species = n_species, n_resources = n_resources)
 print(E)
 
 #positive entries are consumed, negative produced, zero has no influence on the species
@@ -87,7 +87,7 @@ resources = rep(20, 5) #define the starting resource concentration
 
 
 #simulate the model
-CRMsimul <- simulateConsumerResource(n.species = n.species, n_resources = n_resources, resources = resources, stochastic = stochastic, migration_p = migration_p, E=E, t_end = t_end, t_store = t_store)
+CRMsimul <- simulateConsumerResource(n_species = n_species, n_resources = n_resources, resources = resources, stochastic = stochastic, migration_p = migration_p, E=E, t_end = t_end, t_store = t_store)
 
 #visualize the result
 makePlot(CRMsimul$matrix) #species plot
@@ -108,13 +108,13 @@ inflow_rate = 0
 outflow_rate = 0
 
 #simulate the model
-CRMsimul_batch <- simulateConsumerResource(n.species = n.species, n_resources = n_resources, resources = resources, stochastic = stochastic, migration_p = migration_p, E=E, t_end = t_end, t_store = t_store, inflow_rate = inflow_rate, outflow_rate = outflow_rate)
+CRMsimul_batch <- simulateConsumerResource(n_species = n_species, n_resources = n_resources, resources = resources, stochastic = stochastic, migration_p = migration_p, E=E, t_end = t_end, t_store = t_store, inflow_rate = inflow_rate, outflow_rate = outflow_rate)
 
 #fed-batch operation mode
 
 #outflow = 0; inflow>0
 inflow_rate = 1
-CRMsimul_fedbatch <- simulateConsumerResource(n.species = n.species, n_resources = n_resources, resources = resources, stochastic = stochastic, migration_p = migration_p, E=E, t_end = t_end, t_store = t_store, inflow_rate = inflow_rate, outflow_rate = outflow_rate)
+CRMsimul_fedbatch <- simulateConsumerResource(n_species = n_species, n_resources = n_resources, resources = resources, stochastic = stochastic, migration_p = migration_p, E=E, t_end = t_end, t_store = t_store, inflow_rate = inflow_rate, outflow_rate = outflow_rate)
 
 #chemostat
 
