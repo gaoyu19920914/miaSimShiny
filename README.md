@@ -11,6 +11,9 @@ if (!require("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 BiocManager::install("miaSim")
 
+# install the latest version of miaSim via github
+devtools::install_github("microbiome/miaSim")
+
 if (!require("devtools", quietly = TRUE))
   install.packages("devtools")
 devtools::install_github("gaoyu19920914/miaSimShiny")
