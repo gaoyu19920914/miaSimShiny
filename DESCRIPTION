@@ -6,12 +6,13 @@ Description: miaSimShiny facilitates the use of miaSim
   (R package for microbial community simulations, github.com/microbiome/miaSim)
   in a shiny app (shiny.rstudio.com).
 License: MIT + file LICENSE
+Depends:
+    miaSim,
+    miaViz
 Imports: 
     config (>= 0.3.1),
     golem (>= 0.3.3),
     shiny (>= 1.7.2),
-    miaSim,
-    miaViz,
     bsplus,
     reshape2,
     shinyWidgets,
