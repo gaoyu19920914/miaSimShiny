@@ -11,6 +11,7 @@ Imports:
     golem (>= 0.3.3),
     shiny (>= 1.7.2),
     miaSim,
+    miaViz,
     bsplus,
     reshape2,
     shinyWidgets,

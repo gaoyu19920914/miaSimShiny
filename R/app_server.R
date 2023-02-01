@@ -302,9 +302,10 @@ app_server <- function(input, output, session) {
     )}
   )
 
-  output$CRMSpecies <- renderPlot(makePlot(runCRM()$matrix, "abundance of species by time"), res = 96)
-  output$CRMResources <- renderPlot(makePlotRes(runCRM()$resources, "quantity of compounds by time"),  res = 96)
-  output$CRMVolume <- renderPlot(makePlot(runCRM()$volume, "volume changes of the reactor by time"), res = 96)
+  output$CRMSpecies <- renderPlot(plotSeries(runCRM(), x = "time"))
+  output$CRMResources <- renderPlot(makePlotRes(metadata(runCRM())$resources, "quantity of compounds by time"),  res = 96)
+  output$CRMVolume <- renderPlot(makePlot(metadata(runCRM())$volume, "volume changes of the reactor by time"), res = 96)
+
 
   # model2 simulate generalized Lotka-Volterra Model ####
   ## interspecies interactions ####
@@ -469,7 +470,7 @@ app_server <- function(input, output, session) {
       t_store = t_store_glv()
     )
   })
-  output$GLVSpecies <- renderPlot(makePlot(runGLV()$matrix))
+  output$GLVSpecies <- renderPlot(plotSeries(runGLV(), x = "time"))
 
   # model3 simulate Hubbell neutral model with growth rates ####
   ## basic ####
@@ -555,7 +556,7 @@ app_server <- function(input, output, session) {
       t_store = t_store_hub()
     )
   })
-  output$HUBSpecies <- renderPlot(makePlot(runHUB()$matrix, "abundance of species by time"), res = 96)
+  output$HUBSpecies <- renderPlot(plotSeries(runHUB(), x = "time"))
 
   # model4 simulate stochastic logistic model ####
   ## basic ####
@@ -667,5 +668,5 @@ app_server <- function(input, output, session) {
     )
   })
 
-  output$LOGSpecies <- renderPlot(makePlot(runLOG()$matrix, "abundance of species by time"), res = 96)
+  output$LOGSpecies <- renderPlot(plotSeries(runLOG(), x = "time"))
 }
