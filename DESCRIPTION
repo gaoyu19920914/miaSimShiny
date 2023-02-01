@@ -1,6 +1,6 @@
 Package: miaSimShiny
 Title: miaSimShiny
-Version: 0.0.0.9000
+Version: 0.0.1
 Authors@R: person('Yu', 'Gao', email = 'gaoyu19920914@gmail.com', role = c('cre', 'aut'))
 Description: miaSimShiny facilitates the use of miaSim
   (R package for microbial community simulations, github.com/microbiome/miaSim)
