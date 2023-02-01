@@ -12,6 +12,7 @@
 #' @importFrom shinyWidgets switchInput updateSwitchInput
 #' @importFrom reshape2 melt
 #' @import miaSim
+#' @import miaViz
 #' @import ggplot2
 #' @importFrom stats dbeta rbeta rgamma runif
 run_app <- function(
